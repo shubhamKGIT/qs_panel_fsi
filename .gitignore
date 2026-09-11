@@ -1,0 +1,6 @@
+# Results are pulled down from wherever the runs happened; they are never
+# part of the code sync and must not be committed.
+results/
+tests/last_test_report.txt
+*.asv
+.DS_Store

@@ -1,0 +1,78 @@
+{
+  "_note": "Framework defaults. Everything here can be overridden by a case.json or a study file. Keys beginning with an underscore are comments and are ignored.",
+
+  "solver": {
+    "integrator": "ode15s",
+    "RelTol": 1e-7,
+    "AbsTol": 1e-9
+  },
+
+  "aero": {
+    "gamma": 1.4,
+    "zsign": -1,
+    "_c3_mode": "vandyke2 (c3=0, the published Eq.8) | classical_cubic ((gamma+1)/12)",
+    "c3_mode": "vandyke2"
+  },
+
+  "duration": {
+    "base_t_end": 3.0,
+    "base_t_transient": 1.5,
+    "dt_out": 1e-4
+  },
+
+  "ic": {
+    "_mode": "flat | flat_neg | rest. 'flat' is what every existing sweep used.",
+    "mode": "flat",
+    "seed": 1e-4
+  },
+
+  "windows": {
+    "_note": "Sliding-window signature used for mid-run transition detection.",
+    "T_win_s": 0.5,
+    "overlap": 0.5,
+    "settle_windows": 1,
+    "min_persist_windows": 2
+  },
+
+  "classify": {
+    "_amp_tol_wh": "below this peak-to-peak/2h a window counts as static",
+    "amp_tol_wh": 0.10,
+    "_peak_power_frac": "above this fraction of power in the peak band a window is a clean tone (LCO), below it is broadband",
+    "peak_power_frac": 0.35,
+    "peak_band_frac": 0.05,
+    "_stationarity_tol": "relative amplitude drift between the first and second half that marks a record as not yet settled",
+    "stationarity_tol": 0.15,
+    "growth_tol": 3.0,
+    "near_threshold_band": 0.5
+  },
+
+  "store": {
+    "_save_history_if": "which points keep their FULL centre history: transition | nonstationary | near_threshold | divergent | all | none",
+    "save_history_if": ["transition", "nonstationary"],
+    "history_always_ids": [],
+    "save_final_state": false
+  },
+
+  "duration_policy": {
+    "_note": "How a flagged point gets promoted to a longer run by qs_refine_points.",
+    "promote_if": ["boundary", "nonstationary", "near_threshold"],
+    "promoted_t_end": 10.0,
+    "promoted_t_transient": 2.0,
+    "escalate_t_end": 20.0,
+    "escalate_t_transient": 3.0
+  },
+
+  "refine": {
+    "min_dpc_kPa": 0.05,
+    "min_ddT_K": 0.05,
+    "max_new_points": 2000
+  },
+
+  "preflight": {
+    "T0_tol_frac": 0.05,
+    "strict": false,
+    "run_on_sweep": false
+  },
+
+  "checkpoint_every": 5
+}

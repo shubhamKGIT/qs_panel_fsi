@@ -1,0 +1,58 @@
+{
+  "study_id": "sweep_coarse_v1",
+  "mode": "sweep",
+  "_note": [
+    "STAGE A. Purpose is to LOCATE the regime boundary, not to resolve it.",
+    "Resolution is deliberately coarse: 0.25 kPa x 0.5 K over the whole box",
+    "is 27 x 25 = 675 points at 3 s, roughly 80 core-hours. qs_refine_points",
+    "then bisects only the cells where the label actually changes.",
+    "",
+    "The box is centred on the case nominal and spans well past +/-3 sigma of",
+    "both measurement errors, so the answer to 'which regime is the experiment",
+    "in, and how far is the boundary in units of measurement error' is inside",
+    "the sweep rather than extrapolated from its edge.",
+    "",
+    "For case 3 (SBLI) the p_c range must be shifted up to bracket 68.9 kPa --",
+    "copy this file to sweep_coarse_c3_v1.json and change the two pc segments."
+  ],
+
+  "grid": {
+    "pc_kPa": { "lo": 48.5, "hi": 55.0, "d": 0.25 },
+    "dT_K":   { "lo":  6.0, "hi": 18.0, "d": 0.50 }
+  },
+
+  "duration": {
+    "base_t_end": 3.0,
+    "base_t_transient": 1.5,
+    "dt_out": 1e-4
+  },
+
+  "solver": { "integrator": "ode15s", "RelTol": 1e-7, "AbsTol": 1e-9 },
+  "ic": { "mode": "flat", "seed": 1e-4 },
+
+  "windows": { "T_win_s": 0.5, "overlap": 0.5, "settle_windows": 1, "min_persist_windows": 2 },
+
+  "classify": {
+    "amp_tol_wh": 0.10,
+    "peak_power_frac": 0.35,
+    "stationarity_tol": 0.15,
+    "near_threshold_band": 0.5
+  },
+
+  "store": {
+    "save_history_if": ["transition", "nonstationary"],
+    "history_always_ids": []
+  },
+
+  "duration_policy": {
+    "promote_if": ["boundary", "nonstationary", "near_threshold"],
+    "promoted_t_end": 10.0,
+    "promoted_t_transient": 2.0,
+    "escalate_t_end": 20.0,
+    "escalate_t_transient": 3.0
+  },
+
+  "refine": { "min_dpc_kPa": 0.05, "min_ddT_K": 0.05, "max_new_points": 2000 },
+
+  "preflight": { "strict": false, "run_on_sweep": false }
+}

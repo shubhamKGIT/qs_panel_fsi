@@ -1,0 +1,34 @@
+{
+  "case_id": "heated_c2_NoSBLI_Chaotic",
+  "_status": "STUB -- drop the heated .prof exports into aero/ and the DIC results into ref/, then run qs_build_aero('heated_c2_NoSBLI_Chaotic').",
+  "_source": "SBLI_Challenge/case2/config/case2_conditions.json, 'heated' block.",
+
+  "rom_file":  "../../shared/RC19_ROM_v1.mat",
+  "aero_file": "aero/rc19_aero_data.mat",
+  "ref_file":  "ref/RC19_Results_NoSBLI_Chaotic.mat",
+
+  "aero_build": {
+    "surf_file": "aero/heated_panelPressure.prof",
+    "edge_file": "aero/heated_edgeProfile_pressure_mach_soundSpeed.prof",
+    "y_shift_m": 0.0125,
+    "out": "aero/rc19_aero_data.mat"
+  },
+
+  "pinf_Pa": 50139.1,
+  "Minf": 1.92,
+
+  "pc_nom_Pa": 51492.92,
+  "pc_sigma_Pa": 532.5,
+  "dT_nom_K": 14.74,
+  "dT_sigma_K": 3.3871,
+
+  "T0_K": 387.21,
+  "p0_Pa": 346514.05,
+  "Tpanel_K": 352.37,
+  "Tframe_K": 337.63,
+  "f1_installed_Hz": 263.67,
+
+  "panel": { "L_m": 0.254, "W_m": 0.127, "h_m": 6.35e-4 },
+  "dic_y_offset_m": 0.0635,
+  "rom_grid": [101, 51]
+}

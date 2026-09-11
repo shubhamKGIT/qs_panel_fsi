@@ -1,0 +1,38 @@
+{
+  "case_id": "unheated_c1_NoSBLI_Periodic",
+  "_note": [
+    "REGRESSION BASELINE. Every number here is exactly what the original",
+    "stability_sweep/case1_NoSBLI_Periodic/run_detailed_stability_map.m had",
+    "hardcoded, so results from this case must reproduce the old map to",
+    "round-off. Do not 'improve' these values -- make a new case for that.",
+    "The aero file here is the COLD-FLOW RANS (implied T0 ~ 291 K) while the",
+    "experiment ran heated (T0 = 388.25 K). That is a known, recorded problem;",
+    "preflight is EXPECTED to flag it, and test t02 asserts that it does."
+  ],
+
+  "rom_file":  "../../shared/RC19_ROM_v1.mat",
+  "aero_file": "aero/rc19_aero_data.mat",
+  "ref_file":  "ref/RC19_Results_NoSBLI_Periodic.mat",
+
+  "pinf_Pa": 50287,
+  "Minf": 1.92,
+
+  "pc_nom_Pa": 50429.27,
+  "pc_sigma_Pa": 532.0,
+  "dT_nom_K": 12.76,
+  "dT_sigma_K": 3.3026,
+
+  "T0_K": 388.25,
+  "p0_Pa": 347535.53,
+  "f1_installed_Hz": 263.67,
+
+  "panel": {
+    "L_m": 0.254,
+    "W_m": 0.127,
+    "h_m": 6.35e-4
+  },
+  "dic_y_offset_m": 0.0635,
+  "rom_grid": [101, 51],
+
+  "_conditions_src": "SBLI_Challenge/case1/config/case1_conditions.json"
+}

@@ -1,0 +1,40 @@
+{
+  "study_id": "regression_unheated_c1",
+  "mode": "sweep",
+  "_note": [
+    "Reproduces the ORIGINAL case-1 sweep grid value-for-value: the segments",
+    "below are the pc_coarse_lo / pc_fine / pc_coarse_hi and dT vectors that",
+    "run_detailed_stability_map.m built inline. Used by the regression tests.",
+    "Running the whole thing is 1886 points; the tests only run a handful."
+  ],
+
+  "grid": {
+    "pc_kPa": {
+      "segments": [
+        {"lo": 48.5, "hi": 49.0, "d": 0.5},
+        {"lo": 49.5, "hi": 53.5, "d": 0.1},
+        {"lo": 54.0, "hi": 55.0, "d": 0.5}
+      ]
+    },
+    "dT_K": {
+      "segments": [
+        {"lo":  6.0, "hi":  8.25, "d": 0.75},
+        {"lo":  9.0, "hi": 11.0,  "d": 0.5},
+        {"lo": 11.5, "hi": 15.5,  "d": 0.15},
+        {"lo": 16.0, "hi": 18.0,  "d": 0.5}
+      ]
+    }
+  },
+
+  "duration": {
+    "base_t_end": 3.0,
+    "base_t_transient": 1.5,
+    "dt_out": 1e-4
+  },
+
+  "solver": { "integrator": "ode15s", "RelTol": 1e-7, "AbsTol": 1e-9 },
+  "ic": { "mode": "flat", "seed": 1e-4 },
+
+  "store": { "save_history_if": ["transition"] },
+  "preflight": { "strict": false }
+}

@@ -1,0 +1,34 @@
+{
+  "case_id": "heated_c3_AttachedSBLI_Periodic",
+  "_status": "STUB -- drop the heated .prof exports into aero/ and the DIC results into ref/, then run qs_build_aero('heated_c3_AttachedSBLI_Periodic').",
+  "_source": "SBLI_Challenge/case3/config/case3_conditions.json, 'heated' block. This is the wedge / shock-impingement case, so the surface pressure carries the shock footprint and the p_c level is much higher than cases 1-2.",
+
+  "rom_file":  "../../shared/RC19_ROM_v1.mat",
+  "aero_file": "aero/rc19_aero_data.mat",
+  "ref_file":  "ref/RC19_Results_AttachedSBLI_Periodic.mat",
+
+  "aero_build": {
+    "surf_file": "aero/heated_panelPressure.prof",
+    "edge_file": "aero/heated_edgeProfile_pressure_mach_soundSpeed.prof",
+    "y_shift_m": 0.0125,
+    "out": "aero/rc19_aero_data.mat"
+  },
+
+  "pinf_Pa": 50074.9,
+  "Minf": 1.92,
+
+  "pc_nom_Pa": 68877.71,
+  "pc_sigma_Pa": 528.98,
+  "dT_nom_K": 13.43,
+  "dT_sigma_K": 3.4440,
+
+  "T0_K": 385.92,
+  "p0_Pa": 346070.11,
+  "Tpanel_K": 356.94,
+  "Tframe_K": 343.51,
+  "f1_installed_Hz": 263.67,
+
+  "panel": { "L_m": 0.254, "W_m": 0.127, "h_m": 6.35e-4 },
+  "dic_y_offset_m": 0.0635,
+  "rom_grid": [101, 51]
+}

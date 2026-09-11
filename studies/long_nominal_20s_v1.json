@@ -1,0 +1,40 @@
+{
+  "study_id": "long_nominal_20s_v1",
+  "mode": "long",
+  "_note": [
+    "Long single-point runs through the SAME code path as the sweep. Metrics,",
+    "window signature and classification come from the same functions, so a",
+    "point from here can be plotted on a stability map without recalibration.",
+    "",
+    "Leave 'points' out to run the case nominal. Listing several points is how",
+    "you follow up a sweep: the calibrated point, and any point the sweep",
+    "flagged with a mid-run transition."
+  ],
+
+  "points": [
+    { "pc_kPa": 50.42927, "dT_K": 12.760, "label": "case1_nominal" }
+  ],
+
+  "duration": {
+    "base_t_end": 20.0,
+    "base_t_transient": 2.0,
+    "dt_out": 1e-4
+  },
+
+  "solver": { "integrator": "ode15s", "RelTol": 1e-7, "AbsTol": 1e-9 },
+  "ic": { "mode": "flat", "seed": 1e-4 },
+
+  "windows": { "T_win_s": 0.5, "overlap": 0.5, "settle_windows": 1, "min_persist_windows": 2 },
+
+  "fields": {
+    "_note": "Instantaneous surface pressure and deflection. per_second writes one file per simulated second, so a job that dies at second 14 leaves 13 usable files. ~10 MB per second at single precision on the 101x51 grid.",
+    "save": true,
+    "mode": "per_second",
+    "precision": "single",
+    "stride": 1
+  },
+
+  "store": { "save_history_if": ["all"], "save_final_state": true },
+
+  "preflight": { "strict": false }
+}

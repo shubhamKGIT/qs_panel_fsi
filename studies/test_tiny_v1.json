@@ -1,0 +1,25 @@
+{
+  "study_id": "test_tiny_v1",
+  "mode": "sweep",
+  "_note": [
+    "A deliberately tiny, fast study used only by t04 to exercise the",
+    "sweep -> checkpoint -> merge -> refine round trip. t_end is far too",
+    "short for any physical conclusion; do not read anything into the",
+    "labels it produces."
+  ],
+
+  "grid": {
+    "pc_kPa": { "lo": 50.0, "hi": 52.0, "d": 2.0 },
+    "dT_K":   { "lo": 11.0, "hi": 14.0, "d": 3.0 }
+  },
+
+  "duration": { "base_t_end": 0.06, "base_t_transient": 0.02, "dt_out": 1e-4 },
+  "_solver_note": "ode45 with loose tolerances, NOT the production ode15s/1e-7 settings. This study exists to exercise the plumbing in seconds; it is never used for physics, and t03 is what checks the production settings reproduce the old map.",
+  "solver":   { "integrator": "ode45", "RelTol": 1e-6, "AbsTol": 1e-8 },
+  "ic":       { "mode": "flat", "seed": 1e-4 },
+  "windows":  { "T_win_s": 0.01, "overlap": 0.5, "settle_windows": 2, "min_persist_windows": 2 },
+  "store":    { "save_history_if": ["nonstationary"] },
+  "refine":   { "min_dpc_kPa": 0.05, "min_ddT_K": 0.05, "max_new_points": 100 },
+  "preflight":{ "strict": false, "run_on_sweep": false },
+  "checkpoint_every": 2
+}
