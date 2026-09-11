@@ -15,6 +15,12 @@ function qs_startup()
     here = fileparts(mfilename('fullpath'));
     addpath(genpath(fullfile(here,'src')));
 
+    % The test drivers go on the path too, so run_all_tests can be called from
+    % any working directory. tests/compat is NOT included here -- see below.
+    if exist(fullfile(here,'tests'),'dir')==7
+        addpath(fullfile(here,'tests'));
+    end
+
     % Octave only: compatibility shims for MATLAB-only functions used by the
     % model code (griddedInterpolant). Never added under MATLAB.
     if exist('OCTAVE_VERSION','builtin')

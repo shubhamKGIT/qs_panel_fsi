@@ -40,7 +40,11 @@ function M = qs_build_model(C, quiet)
         'Lp',       C.case.panel.L_m, ...
         'pback',    C.case.pc_nom_Pa, ...   % per-point value overrides this
         'zsign',    C.aero.zsign);
-    if quiet
+    % evalc is used only to swallow cm_setup_aero's banner in quiet mode.
+    % Octave's evalc does not forward the expression's output arguments, so
+    % there the banner is simply printed -- harmless, and Octave is only ever
+    % used for checks here.
+    if quiet && ~qs_isoctave()
         [~, M.aero] = evalc('cm_setup_aero(M.rom, opts)');
     else
         M.aero = cm_setup_aero(M.rom, opts);

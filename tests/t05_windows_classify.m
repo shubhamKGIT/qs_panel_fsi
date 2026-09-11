@@ -37,6 +37,31 @@ function R = t05_windows_classify()
     chk(~K.flags.nonstationary, 'a steady signal was flagged nonstationary');
     fprintf('    static           -> %s\n', K.label_name);
 
+    % ---------- 1b. a dead panel is NOT "nonstationary" -------------------
+    % A still panel's residual decays and its first/last amplitude ratio is
+    % roundoff. Without an amplitude floor on the drift test this fires on
+    % every static cell in a map, and each one then gets promoted to a 10 s
+    % and then a 20 s re-run. This is the guard against that.
+    wc = 1e-8*h*exp(-t/1.3).*sin(2*pi*f0*t) + 1e-9*h*sin(2*pi*37*t);
+    [K,~] = run_case(t, wc, h, C);
+    chk(K.label==1, 'a dead panel was labelled "%s", expected static', K.label_name);
+    chk(~K.flags.nonstationary, ...
+        ['a panel at rest (%.1e w/h) was flagged NONSTATIONARY. The drift test is ' ...
+         'being applied to numerical residue; check classify.stationarity_amp_floor.'], K.amp_last);
+    chk(~K.flags.drift_tested, 'the drift test should not even have been applied at %.1e w/h', K.amp_ref);
+    fprintf('    dead panel       -> %s, nonstationary %d (drift test applied: %d)\n', ...
+        K.label_name, K.flags.nonstationary, K.flags.drift_tested);
+
+    % ---------- 1c. a borderline amplitude IS still judged on drift -------
+    % 0.07 w/h is below the static tolerance but far above residue, so a run
+    % that is genuinely still growing there must be caught.
+    wc = h*(0.02 + 0.05*t/max(t)).*sin(2*pi*f0*t);
+    [K,~] = run_case(t, wc, h, C);
+    chk(K.flags.drift_tested, 'a %.3f w/h record was not drift-tested; the floor is too high', K.amp_ref);
+    chk(K.flags.nonstationary, 'a steadily growing borderline record was not flagged nonstationary');
+    fprintf('    borderline drift -> %s, amp %.4f -> %.4f w/h, nonstationary %d\n', ...
+        K.label_name, K.amp_first, K.amp_last, K.flags.nonstationary);
+
     % ---------- 2. a clean tone is an LCO, at the right frequency ---------
     wc = 2*h*sin(2*pi*f0*t);                        % amplitude 2 w/h
     [K,W] = run_case(t, wc, h, C);

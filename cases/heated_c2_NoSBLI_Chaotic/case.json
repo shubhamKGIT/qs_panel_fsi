@@ -4,14 +4,14 @@
   "_source": "SBLI_Challenge/case2/config/case2_conditions.json, 'heated' block.",
 
   "rom_file":  "../../shared/RC19_ROM_v1.mat",
-  "aero_file": "aero/rc19_aero_data.mat",
+  "aero_file": "aero/case2_heated_aero_data.mat",
   "ref_file":  "ref/RC19_Results_NoSBLI_Chaotic.mat",
 
   "aero_build": {
-    "surf_file": "aero/heated_panelPressure.prof",
-    "edge_file": "aero/heated_edgeProfile_pressure_mach_soundSpeed.prof",
+    "surf_file": "aero/case2_panel_pressure_profile.prof",
+    "edge_file": "aero/case2_bl_edge_pressure_mach_a.prof",
     "y_shift_m": 0.0125,
-    "out": "aero/rc19_aero_data.mat"
+    "out": "aero/case2_heated_aero_data.mat"
   },
 
   "pinf_Pa": 50139.1,

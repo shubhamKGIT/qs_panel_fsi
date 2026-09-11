@@ -132,6 +132,70 @@ function F = qs_preflight(M, C)
     F.checks.buckling = struct('pass',okB,'dT_cr',dT_cr,'f1',f1);
     F.pass = F.pass && okB;
 
+    % ---------- 4. does the study's box contain the operating point? ---------
+    %  The sweep exists to answer "which regime is the EXPERIMENT in, and how
+    %  far away is the boundary". If the measured operating point is not inside
+    %  the swept box, the sweep cannot answer that question no matter how well
+    %  it runs. This is the cheapest possible check and it catches the most
+    %  expensive mistake: pointing a study written for one case at another case
+    %  whose cavity pressure sits somewhere else entirely.
+    okX = true;
+    F.checks.box = struct('pass',true);
+    if isfield(C.study,'grid')
+        pcv = qs_axis(C.study.grid.pc_kPa,'grid.pc_kPa') * 1e3;
+        dTv = qs_axis(C.study.grid.dT_K,  'grid.dT_K');
+        pcn = C.case.pc_nom_Pa;   dTn = C.case.dT_nom_K;
+        spc = getfielddef(C.case,'pc_sigma_Pa', NaN);
+        sdT = getfielddef(C.case,'dT_sigma_K',  NaN);
+
+        fprintf('  study p_c range   : %.2f .. %.2f kPa   (nominal %.2f kPa)\n', ...
+            min(pcv)/1e3, max(pcv)/1e3, pcn/1e3);
+        fprintf('  study dT  range   : %.2f .. %.2f K     (nominal %.3f K)\n', ...
+            min(dTv), max(dTv), dTn);
+
+        [okpc, mpc] = inside('p_c', pcn, pcv, spc, 'kPa', 1e3);
+        [okdT, mdT] = inside('dT',  dTn, dTv, sdT, 'K',   1);
+        okX = okpc && okdT;
+        if ~okX
+            note(C, ['STUDY BOX DOES NOT CONTAIN THE OPERATING POINT.\n' ...
+                     '    %s%s\n' ...
+                     '    This sweep cannot say which regime the experiment is in.\n' ...
+                     '    Copy the study file, move the range onto the nominal, and re-init.'], mpc, mdT);
+        else
+            % inside the box, but is there room to see the boundary either side?
+            margin_pc = min(pcn-min(pcv), max(pcv)-pcn);
+            margin_dT = min(dTn-min(dTv), max(dTv)-dTn);
+            if isfinite(spc) && spc > 0 && margin_pc < 3*spc
+                note(C, 'the nominal p_c sits only %.1f sigma from the edge of the swept range; widen it or the boundary may fall outside.', margin_pc/spc);
+                okX = false;
+            end
+            if isfinite(sdT) && sdT > 0 && margin_dT < 1*sdT
+                note(C, 'the nominal dT sits only %.1f sigma from the edge of the swept range.', margin_dT/sdT);
+                okX = false;
+            end
+        end
+        F.checks.box = struct('pass',okX, 'pc_range',[min(pcv) max(pcv)], ...
+                              'dT_range',[min(dTv) max(dTv)], 'pc_nom',pcn, 'dT_nom',dTn);
+    end
+    F.pass = F.pass && okX;
+
+    % ---------- 5. is piston theory usable everywhere on the panel? ---------
+    %  c1 = M/sqrt(M^2-1) is singular at M = 1. A BL-edge Mach number at or
+    %  below 1 anywhere on the panel makes the coefficients complex or huge,
+    %  and nothing downstream would tell you -- the run just produces nonsense.
+    Mlo = min(M.aero.Ml);
+    fprintf('  min BL-edge Mach  : %.3f\n', Mlo);
+    okM = true;
+    if ~isreal(M.aero.c1) || ~isreal(M.aero.c2)
+        okM = false;
+        note(C, 'the Van Dyke coefficients are COMPLEX: some BL-edge Mach numbers are subsonic. Piston theory does not apply here.');
+    elseif Mlo < 1.05
+        okM = false;
+        note(C, 'minimum BL-edge Mach is %.3f. c1 = M/sqrt(M^2-1) is %.1f there -- piston theory is stretched thin near M = 1.', Mlo, Mlo/sqrt(Mlo^2-1));
+    end
+    F.checks.mach = struct('pass',okM,'Ml_min',Mlo);
+    F.pass = F.pass && okM;
+
     % ---------- verdict ------------------------------------------------------
     if F.pass
         fprintf('  PREFLIGHT PASSED\n');
@@ -155,4 +219,24 @@ end
 
 function s = ternary(c,a,b)
     if c, s = a; else, s = b; end
+end
+
+function v = getfielddef(S, f, d)
+    if isstruct(S) && isfield(S,f) && ~isempty(S.(f)), v = S.(f); else, v = d; end
+end
+
+function [ok, msg] = inside(name, nom, vec, sigma, unit, scale)
+%INSIDE  Is the nominal value within the swept range, and by how much?
+    ok = (nom >= min(vec)) && (nom <= max(vec));
+    msg = '';
+    if ~ok
+        if nom < min(vec), gap = min(vec) - nom; where = 'BELOW';
+        else,              gap = nom - max(vec); where = 'ABOVE'; end
+        extra = '';
+        if isfinite(sigma) && sigma > 0
+            extra = sprintf(' = %.0f sigma', gap/sigma);
+        end
+        msg = sprintf('%s nominal %.3f %s is %s the swept range by %.3f %s%s. ', ...
+            name, nom/scale, unit, where, gap/scale, unit, extra);
+    end
 end

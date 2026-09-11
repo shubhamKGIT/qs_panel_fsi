@@ -4,19 +4,19 @@
   "_source": "Values taken from SBLI_Challenge/case1/config/case1_conditions.json, 'heated' block. Two-element entries there are [value, error]; the value is used here and the error becomes the sigma below.",
 
   "rom_file":  "../../shared/RC19_ROM_v1.mat",
-  "aero_file": "aero/rc19_aero_data.mat",
+  "aero_file": "aero/case1_heated_aero_data.mat",
   "ref_file":  "ref/RC19_Results_NoSBLI_Periodic.mat",
 
   "aero_build": {
     "_note": "File names are placeholders -- rename to whatever you export, or rename the exports to these. A .csv with a header row works too.",
-    "surf_file": "aero/heated_panelPressure.prof",
-    "edge_file": "aero/heated_edgeProfile_pressure_mach_soundSpeed.prof",
+    "surf_file": "aero/case1_panel_pressure_profile.prof",
+    "edge_file": "aero/case1_bl_edge_pressure_mach_a.prof",
     "y_shift_m": 0.0125,
     "_fields": "Column names are auto-detected. Override only if yours differ, e.g. \"edge_fields\": {\"sound_speed\": \"c\"}.",
-    "out": "aero/rc19_aero_data.mat"
+    "out": "aero/case1_heated_aero_data.mat"
   },
 
-  "pinf_Pa": 50286.9,
+  "pinf_Pa": 50287.54,
   "Minf": 1.92,
   "_Minf_note": "AFRL gives nominal M = 2.0 but states the test-section Mach is likely 1.92 +/- 0.02. The choice moves p_inf by ~5.9 kPa (44.42 vs 50.29 kPa). 1.92 is carried here for continuity with the unheated analysis; this is the open question behind the static-load sign issue.",
 
@@ -26,7 +26,7 @@
   "dT_sigma_K": 3.3026,
 
   "T0_K": 388.25,
-  "p0_Pa": 347535.53,
+  "p0_Pa": 347540.00,
   "Tpanel_K": 356.47,
   "Tframe_K": 343.71,
   "f1_installed_Hz": 263.67,

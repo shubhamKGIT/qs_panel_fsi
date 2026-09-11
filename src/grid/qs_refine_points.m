@@ -39,12 +39,35 @@ function P = qs_refine_points(caseId, studyId, dry_run)
     max_new = getdef(R,'max_new_points', 2000);
 
     nextLevel = max(P.level) + 1;
+    base_ic   = getdef(getdef(C,'ic',struct()),'mode','flat');
     G = qs_rasterize(D);
 
     % ================= (1) spatial bisection of label boundaries ===========
     newpc = [];  newdT = [];
     npc = numel(G.pc_kPa);  ndT = numel(G.dT_K);
 
+    %  COHERENCE. Bisection only makes sense between two regions that are each
+    %  internally consistent -- then the boundary is a curve and halving the gap
+    %  finds it. This map is not always like that. In the unheated case-1 sweep
+    %  the amplitude is strongly bimodal (dead, or about 2.2 w/h, with little in
+    %  between) and near the transition the labels SPECKLE: 35 cells disagree
+    %  with all four of their neighbours, and 62 static cells sit surrounded by
+    %  oscillating ones at 0.1 kPa x 0.15 K spacing. That is a basin effect --
+    %  two attractors coexist and which one a flat start reaches varies
+    %  erratically -- not a boundary that is merely under-resolved.
+    %
+    %  Bisecting a speckle does not converge: every adjacent pair disagrees, so
+    %  each pass proposes hundreds of points, every one of them lands in the
+    %  same mottled region, and the compute disappears into chasing a curve that
+    %  is not there. So a pair is only bisected when BOTH cells agree with a
+    %  majority of their own neighbours. Cells that do not are handled as
+    %  speckle instead: re-run longer, and optionally re-run from the opposite
+    %  initial condition, which is the measurement that actually tests the basin
+    %  hypothesis.
+    coh = local_coherence(G);                    % true where a cell agrees with its neighbours
+    needCoh = getdef(R,'require_coherent_boundary', true);
+
+    n_skipped = 0;
     for j = 1:ndT                                  % along p_c
         fi = find(G.filled(:,j));
         for a = 1:numel(fi)-1
@@ -52,6 +75,7 @@ function P = qs_refine_points(caseId, studyId, dry_run)
             if G.label(i1,j) == G.label(i2,j), continue; end
             gap = G.pc_kPa(i2) - G.pc_kPa(i1);
             if gap <= min_dpc, continue; end
+            if needCoh && ~(coh(i1,j) && coh(i2,j)), n_skipped = n_skipped + 1; continue; end
             newpc(end+1,1) = 0.5*(G.pc_kPa(i1)+G.pc_kPa(i2)); %#ok<AGROW>
             newdT(end+1,1) = G.dT_K(j);                        %#ok<AGROW>
         end
@@ -65,6 +89,7 @@ function P = qs_refine_points(caseId, studyId, dry_run)
             if G.label(i,j1) == G.label(i,j2), continue; end
             gap = G.dT_K(j2) - G.dT_K(j1);
             if gap <= min_ddT, continue; end
+            if needCoh && ~(coh(i,j1) && coh(i,j2)), n_skipped = n_skipped + 1; continue; end
             newpc(end+1,1) = G.pc_kPa(i);                       %#ok<AGROW>
             newdT(end+1,1) = 0.5*(G.dT_K(j1)+G.dT_K(j2));       %#ok<AGROW>
         end
@@ -87,7 +112,7 @@ function P = qs_refine_points(caseId, studyId, dry_run)
         't_end',   getdef(DP,'promoted_t_end', 10.0), ...
         't_trans', getdef(DP,'promoted_t_transient', 2.0), ...
         'level',   nextLevel, ...
-        'ic_tag',  getdef(getdef(C,'ic',struct()),'mode','flat'), ...
+        'ic_tag',  base_ic, ...
         'origin',  'refine'));
 
     % ================= (2) temporal promotion of shaky labels ==============
@@ -143,17 +168,62 @@ function P = qs_refine_points(caseId, studyId, dry_run)
         Pnew_time = qs_pointlist('make', D.pc_Pa(idx), D.dT_K(idx), opts);
     end
 
+    % ================= (3) speckled cells: longer, and the other basin =======
+    %  A cell whose label disagrees with its own neighbours is not telling you
+    %  where a boundary is. Two things could produce it: the run had not settled
+    %  (fix with time) or the flat-start trajectory fell into the other basin
+    %  (fix by starting from the other side and seeing whether the answer
+    %  changes). Both are cheap, and together they distinguish the two.
+    Pnew_ic = qs_pointlist('empty');
+    Pnew_spk = qs_pointlist('empty');
+    [si, sj] = find(G.filled & ~coh);
+    n_speckle = numel(si);
+    if n_speckle > 0
+        spc = G.pc_kPa(si)*1e3;   sdT = G.dT_K(sj);
+        ste = zeros(n_speckle,1); str_ = zeros(n_speckle,1);
+        for k = 1:n_speckle
+            if G.t_end(si(k),sj(k)) >= t_prom - 1e-9
+                ste(k) = t_esc;   str_(k) = tr_esc;
+            else
+                ste(k) = t_prom;  str_(k) = tr_prom;
+            end
+        end
+        o = struct();
+        o.t_end = ste;  o.t_trans = str_;  o.level = nextLevel;
+        o.ic_tag = base_ic;  o.origin = 'refine';  o.save_hist = true;
+        Pnew_spk = qs_pointlist('make', spc, sdT, o);
+
+        if getdef(R,'ic_probe', true)
+            o2 = o;  o2.ic_tag = opposite_ic(base_ic);
+            Pnew_ic = qs_pointlist('make', spc, sdT, o2);
+        end
+    end
+
     % ================= append ==============================================
     before = numel(P.id);
     Q = qs_pointlist('append', qs_pointlist('empty'), Pnew_space);
     Q = qs_pointlist('append', Q, Pnew_time);
+    Q = qs_pointlist('append', Q, Pnew_spk);
+    Q = qs_pointlist('append', Q, Pnew_ic);
     Q = drop_existing(Q, P);
     nnew = numel(Q.id);
 
     fprintf('\n--- qs_refine_points  %s / %s  (level %d) ---\n', caseId, studyId, nextLevel);
     fprintf('  boundary midpoints  : %d  (%d along p_c, %d along dT, before dedup)\n', ...
         numel(Pnew_space.id), n_pc_side, n_dT_side);
+    if n_skipped > 0
+        fprintf('  pairs NOT bisected  : %d  (speckled -- the label there disagrees with\n', n_skipped);
+        fprintf('                            its own neighbours, so there is no curve to\n');
+        fprintf('                            halve. Handled as speckle instead.)\n');
+    end
     fprintf('  promoted for time   : %d  (longer re-runs of flagged points)\n', numel(Pnew_time.id));
+    if n_speckle > 0
+        fprintf('  speckled cells      : %d  (re-run longer', n_speckle);
+        if ~isempty(Pnew_ic.id)
+            fprintf(' + %d from the opposite basin', numel(Pnew_ic.id));
+        end
+        fprintf(')\n');
+    end
     fprintf('  new after dedup     : %d\n', nnew);
     if nnew > 0
         fprintf('  estimated cost      : %.1f core-hours at 2.3 min per simulated second\n', ...
@@ -202,4 +272,41 @@ end
 
 function v = getdef(S, f, d)
     if isstruct(S) && isfield(S,f) && ~isempty(S.(f)), v = S.(f); else, v = d; end
+end
+
+function coh = local_coherence(G)
+%LOCAL_COHERENCE  True where a cell's label agrees with most of its neighbours.
+%   A cell on a genuine boundary still counts as coherent: it sits next to its
+%   own kind on one side. Only a cell that disagrees with the majority of its
+%   filled 4-neighbours is called incoherent -- the isolated flips that make a
+%   speckled region. Cells with fewer than two filled neighbours (map edges,
+%   ragged lattice after refinement) are treated as coherent, because there is
+%   not enough context to say otherwise.
+    [npc, ndT] = size(G.label);
+    coh = true(npc, ndT);
+    for i = 1:npc
+        for j = 1:ndT
+            if ~G.filled(i,j), continue; end
+            same = 0;  tot = 0;
+            for d = [-1 0; 1 0; 0 -1; 0 1].'
+                a = i + d(1);  b = j + d(2);
+                if a < 1 || a > npc || b < 1 || b > ndT, continue; end
+                if ~G.filled(a,b), continue; end
+                tot = tot + 1;
+                if G.label(a,b) == G.label(i,j), same = same + 1; end
+            end
+            if tot >= 2
+                coh(i,j) = (same >= tot/2);
+            end
+        end
+    end
+end
+
+function t = opposite_ic(tag)
+%OPPOSITE_IC  The mirrored starting deflection, for a basin probe.
+    switch lower(tag)
+        case 'flat',     t = 'flat_neg';
+        case 'flat_neg', t = 'flat';
+        otherwise,       t = 'flat_neg';
+    end
 end

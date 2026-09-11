@@ -91,8 +91,18 @@ function R = qs_run_point(M, C, pt, want_history)
             want_history = pt.save_hist(1) || history_wanted(R, C);
         end
         if want_history
-            R.wc   = single(m.wc(:).');
-            R.tvec = single(tvec(:).');
+            % Single precision by default: a 20 s record is 800 kB that way,
+            % and for looking at a trace that is plenty. Diagnostics that
+            % compare two runs against each other need more -- single
+            % precision puts a floor of about 1e-7 w/h on any such comparison,
+            % which is coarser than the differences worth resolving. Set
+            % C.store.history_precision = 'double' for those.
+            hp = 'single';
+            if isfield(C.store,'history_precision') && ~isempty(C.store.history_precision)
+                hp = C.store.history_precision;
+            end
+            R.wc   = cast(m.wc(:).',  hp);
+            R.tvec = cast(tvec(:).',  hp);
         end
 
         if isfield(C.store,'save_final_state') && C.store.save_final_state

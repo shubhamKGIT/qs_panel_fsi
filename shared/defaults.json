@@ -65,13 +65,50 @@
   "refine": {
     "min_dpc_kPa": 0.05,
     "min_ddT_K": 0.05,
-    "max_new_points": 2000
+    "max_new_points": 2000,
+
+    "_coherence": [
+      "Bisection assumes the boundary is a curve. In this system it sometimes",
+      "is not: near the transition the labels SPECKLE, because two attractors",
+      "coexist and which one a flat start reaches varies erratically with the",
+      "parameters. In the unheated case-1 map, 489 of 3685 adjacent cell pairs",
+      "disagreed, 35 cells disagreed with all four neighbours, and 62 static",
+      "cells sat surrounded by oscillating ones. Bisecting that does not",
+      "converge -- it just spends compute.",
+      "With require_coherent_boundary true, a pair is halved only when both",
+      "cells agree with a majority of their own neighbours. Isolated flips are",
+      "treated as speckle instead: re-run longer, and with ic_probe true, also",
+      "re-run from the mirrored initial condition, which is the measurement",
+      "that actually tests whether it is a basin effect."
+    ],
+    "require_coherent_boundary": true,
+    "ic_probe": true
   },
 
   "preflight": {
     "T0_tol_frac": 0.05,
     "strict": false,
-    "run_on_sweep": false
+    "run_on_sweep": false,
+
+    "_margins": [
+      "How much room the swept box must leave either side of the case nominal,",
+      "in units of that parameter's measurement error. The nominal must always",
+      "be INSIDE the box -- that check cannot be switched off. These two only",
+      "govern how much slack is demanded beyond that.",
+      "",
+      "p_c: sigma is ~0.5 kPa and the regime was seen to flip within that",
+      "uncertainty, so sigma is the right yardstick and a few sigma of room is",
+      "cheap. 3 is the default.",
+      "",
+      "dT: sigma is ~3.4 K (two independent thermocouple errors) while the LCO",
+      "onset is narrow and sits mid-box -- between 12.76 K and 14.74 K for",
+      "case 1. The usual 6-18 K range already runs from just above the 5.65 K",
+      "buckling threshold to more than three times it. A sigma-based margin has",
+      "no physical content here, so it is OFF by default. Set it above 0 only",
+      "for a study where you have a reason."
+    ],
+    "pc_margin_sigma": 3,
+    "dT_margin_sigma": 0
   },
 
   "checkpoint_every": 5

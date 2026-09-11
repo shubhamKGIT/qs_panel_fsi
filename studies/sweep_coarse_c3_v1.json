@@ -1,23 +1,26 @@
 {
-  "study_id": "sweep_coarse_v1",
+  "study_id": "sweep_coarse_c3_v1",
   "mode": "sweep",
   "_note": [
-    "STAGE A. Purpose is to LOCATE the regime boundary, not to resolve it.",
-    "Resolution is deliberately coarse: 0.25 kPa x 0.5 K over the whole box",
-    "is 27 x 25 = 675 points at 3 s, roughly 80 core-hours. qs_refine_points",
-    "then bisects only the cells where the label actually changes.",
+    "STAGE A for CASE 3 (AttachedSBLI). Identical in every respect to",
+    "sweep_coarse_v1 except the p_c range, which is moved onto case 3's own",
+    "operating point.",
     "",
-    "The box is centred on the case nominal and spans well past +/-3 sigma of",
-    "both measurement errors, so the answer to 'which regime is the experiment",
-    "in, and how far is the boundary in units of measurement error' is inside",
-    "the sweep rather than extrapolated from its edge.",
+    "Case 3 runs with the wedge installed, so the cavity pressure is much",
+    "higher than cases 1-2: nominal 68.88 kPa, not ~50.4 kPa. Sweeping",
+    "48.5-55.0 kPa here would run 650 points roughly 14 kPa away from the",
+    "condition the experiment was actually at, and could not answer which",
+    "regime the experiment is in. qs_preflight now refuses a study whose box",
+    "does not contain the case nominal, which is what caught this.",
     "",
-    "For case 3 (SBLI) the p_c range must be shifted up to bracket 68.9 kPa --",
-    "copy this file to sweep_coarse_c3_v1.json and change the two pc segments."
+    "Box: 64.0-74.0 kPa is about +/-9 sigma of the 529 Pa cavity-pressure",
+    "error either side of 68.88 kPa, and it overlaps the range the original",
+    "unheated case-3 sweep used (55.2-74.5 kPa) where the boundary was found.",
+    "26 x 25 = 650 points at 3 s, comparable in cost to the other two cases."
   ],
 
   "grid": {
-    "pc_kPa": { "lo": 48.5, "hi": 57.0, "d": 0.25 },
+    "pc_kPa": { "lo": 64.0, "hi": 76.0, "d": 0.4 },
     "dT_K":   { "lo":  6.0, "hi": 18.0, "d": 0.50 }
   },
 
