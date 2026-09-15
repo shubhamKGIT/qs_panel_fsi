@@ -11,6 +11,8 @@ qs_framework/
 ├── studies/<id>.json  what to do with a case
 ├── shared/            the ROM and defaults.json
 ├── slurm/             launchers
+├── tests/             the five checks
+├── docs/              CODES.md, the design memo, the examples sheet
 └── results/<case>/<study>/   everything a run produces
 ```
 
@@ -19,10 +21,13 @@ qs_framework/
 ## Quick start
 
 ```matlab
-run('/path/to/qs_framework/qs_startup.m')
+run('/path/to/qs_framework/qs_startup.m')     % once per session, from anywhere
 
 % check the plumbing before anything expensive
-cd(fullfile(qs_root(),'tests')); run_all_tests([1 2 5])
+run_all_tests([1 2 5])
+
+% what does label 3 mean? what is Amp_wh?
+qs_codes
 
 % a sweep
 qs_init_study('heated_c1_NoSBLI_Periodic','sweep_coarse_v1')   % once
@@ -97,10 +102,17 @@ Consequences, all of which fall out for free:
 `sweep_coarse_v1` is deliberately coarse (0.25 kPa × 0.5 K, ~675 points,
 ~80 core-hours). Its job is to *locate* the boundary. `qs_refine_points` then
 
-- bisects every adjacent pair of cells whose labels differ, down to
-  `refine.min_dpc_kPa` / `min_ddT_K`, and
+- bisects adjacent pairs of cells whose labels differ, down to
+  `refine.min_dpc_kPa` / `min_ddT_K` — but **only where the boundary is
+  locally coherent**, i.e. both cells agree with a majority of their own
+  neighbours. Near the transition this map speckles (two attractors coexist
+  and which one a flat start reaches varies erratically), and bisecting a
+  speckle never converges — it just spends compute,
 - re-queues at 10 s (then 20 s) any point flagged `nonstationary`,
-  `near_threshold` or `transition`.
+  `near_threshold` or `transition`, and
+- for speckled cells, re-runs them longer **and** from the mirrored initial
+  condition (`refine.ic_probe`), which is the measurement that actually tests
+  whether it is a basin effect.
 
 Repeat merge → refine → resubmit until it reports nothing to add.
 
@@ -146,14 +158,17 @@ Keys beginning with `_` are comments and are ignored.
 ## Preflight
 
 Runs automatically before a long run; set `preflight.run_on_sweep = true` to
-run it on sweeps too. Three checks, each of which has already cost a full
-sweep on this project:
+run it on sweeps too. Five checks — the first three each cost a full sweep on
+this project before they existed, and the fourth was added after a study was
+pointed at a case whose operating point sat 26σ outside its own swept box:
 
 | check | what it catches |
 |---|---|
 | implied `T0` from `a_edge`, `M_edge` | a cold-flow RANS behind a heated case: `a_edge` low by √(388/291) makes the piston-theory damping term `Zdot/a_l` ~15% too large, which suppresses limit cycles and shrinks the flutter region. The map still looks plausible. |
 | `mean(p_l) − p_c` vs the DIC mean deflection | the panel being pushed the wrong way, which makes every mean-field RMSE meaningless. Set `case.net_load_sign_convention` to `+1`/`-1` to enable it. |
 | `dT_cr` from `Ke v = dT·Kt v` | sweeping mostly below the buckling threshold |
+| the study box contains the case nominal | a study written for one case pointed at another whose p_c sits somewhere else entirely. The nominal must be **inside** the box, with `preflight.pc_margin_sigma` (3) of p_c margin. `dT_margin_sigma` defaults to 0 = off, because σ(ΔT) ≈ 3.4 K is large while the LCO onset is narrow and mid-box — a σ-margin there has no physical content |
+| minimum BL-edge Mach clear of 1 | `c1 = M/√(M²−1)` is singular at M = 1; subsonic edge cells make the coefficients complex and nothing downstream would tell you |
 
 `preflight.strict = true` turns a finding into an error.
 
@@ -162,16 +177,18 @@ sweep on this project:
 ## Tests
 
 ```matlab
-cd(fullfile(qs_root(),'tests'))
 run_all_tests([1 2 5])   % fast: plumbing only, no integration
 run_all_tests            % adds the regression and round-trip tests
 ```
+
+`qs_startup` puts `tests/` on the path, so these work from any directory.
 
 | test | what it proves | cost |
 |---|---|---|
 | t01 | config resolution, grid construction, IDs, slicing, append | < 1 s |
 | t02 | model build matches the original driver; preflight fires | ~10 s |
-| t03 | **metrics reproduce the original case-1 map to 1e-6** | ~3 min/point |
+| t03 | **metrics reproduce the original case-1 map to 1e-6**, with absolute floors so near-zero quantities are not compared as ratios | ~3 min/point |
+| t03b | `t03b_attribute(pc,dT)` — why one point differs: settings, or trajectory sensitivity | ~6 min |
 | t04 | init → slices → resume → merge → rasterize → refine | ~1 min |
 | t05 | windows / classification / transition on known signals | ~5 s |
 
@@ -219,6 +236,44 @@ cases up, pull results down:
 rsync -av --exclude results/ qs_framework/ cluster:/path/qs_framework/
 rsync -av cluster:/path/qs_framework/results/ qs_framework/results/
 ```
+
+---
+
+## Codes and conventions
+
+Results tables are full of numbers that stand for things — `label = 3`,
+`level = 1`, `signflip = -1`. What each one means is written down in one place,
+**`docs/CODES.md`**, and printed by:
+
+```matlab
+qs_codes                % everything
+qs_codes('labels')      % labels flags metrics points config files units
+```
+
+`qs_codes` builds the label section by calling `qs_label_name`, so it cannot
+drift from what the classifier assigns. **Adding a coded value means editing
+`qs_codes.m` and `docs/CODES.md` in the same commit.**
+
+The short version:
+
+| label | | flags (independent of the label) |
+|---|---|---|
+| 0 `unknown` | | `nonstationary`, `drift_tested`, `near_threshold`, |
+| 1 `static` | | `divergent`, `short_record`, `trans_flag`, `ok` |
+| 2 `LCO` | | |
+| 3 `broadband` | | |
+| 4 `divergent` | | |
+
+There is no label for "nonstationary" — a run can be `static` **and**
+`nonstationary`, which is the whole point of keeping them apart: one says what
+the panel did, the other says whether to believe it.
+
+`Amp_wh` is `(max − min)/(2h)` of the **centre node** over the whole
+post-transient record — a half-range, so for a sinusoid it is the single-sided
+amplitude in panel thicknesses. `amp_last` is the mean window amplitude over the
+last half, and is the one the label actually describes; the map plots that.
+`MeanPeak` / `StdPeak` are time statistics within one run, peaked over the
+panel. **Nothing is ever averaged across sweep points.**
 
 ---
 
